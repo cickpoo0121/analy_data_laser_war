@@ -30,6 +30,6 @@ class Player {
         "Nickname": nickname,
         "Team": team,
         'score': score,
-        "killed": killed.toString(),
+        "killed": killed,
       };
 }

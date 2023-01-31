@@ -14,32 +14,25 @@ class ReadFileTest extends StatefulWidget {
 
 class _ReadFileTestState extends State<ReadFileTest> {
   String souceFile =
-      "F:/Freelance/fotoclubProject/POC/read_files_test/app_ver/assets/RealtimeStatistics_1.json";
+      "F:/Freelance/fotoclubProject/POC/read_files_test/app_ver/assets/RealtimeStatistics.json";
   final killScore = 5;
 
   void readFIles() {
     File file = File(souceFile);
     List<String> raw = file.readAsLinesSync();
-    // inspect(raw);
 
     Map<String, dynamic> lineOne = jsonDecode(raw[0]); // line 1 for get players
-    // inspect(lineOne['Item']['Players']);
 
-    List listPlayJson = lineOne['Item']['Players'];
-    // inspect(listPlayJson);
+    // List listPlayJson = lineOne['Item']['Players'];
 
-    List<Player> players =
-        listPlayJson.map<Player>((p) => Player.fromJson(p)).toList();
-    // inspect(players);
+    List<Player> players = (lineOne['Item']['Players'])
+        .map<Player>((p) => Player.fromJson(p))
+        .toList();
 
     // Loop start with line two
     for (int i = 1; i < raw.length; i++) {
-      // print(raw[i]);
-
-      // Have events score and hits
-      if (raw[i].contains('Score')) {
-        // print('score, hits');
-
+      // check kill
+      if (raw[i].contains('Frags')) {
         // convert to json
         Map<String, dynamic> killerEvent = jsonDecode(raw[i]);
 
@@ -47,47 +40,35 @@ class _ReadFileTestState extends State<ReadFileTest> {
         int killerIndex = players.indexWhere(
             (element) => element.playerId == killerEvent['Item']['PlayerId']);
 
-        // update player score
-        int? pastScore = players[killerIndex].score;
-        players[killerIndex].score = killerEvent['Item']['Score'];
-        int? nowScore = players[killerIndex].score;
+        // find victim
+        int victimIndex = lookUpVictim(players, raw, i);
 
-        // print('score calcuated:${nowScore! - pastScore!}');
-        // print('${nowScore} - ${pastScore}');
+        Player killer = players[killerIndex];
+        Player victim = players[victimIndex];
 
-        // add killed when score gap equal 5
-        if (
-            // nowScore! - pastScore! >= killScore
-            // &&
-            raw[i].contains('Frags')) {
-          // print('has score and hits then to check get 5 point or not');
-
-          Map<String, dynamic> victim = jsonDecode(raw[i - 1]);
-          int victimIndex = players.indexWhere(
-              (element) => element.playerId == victim['Item']['PlayerId']);
-          players[killerIndex]
-              .killed!
-              .add(players[victimIndex].name.toString());
-
-          // print(
-          //   'killerId: ${players[killerIndex].playerId} ===== ${raw[i]}',
-          // );
-          // print(
-          //   'victimId: ${players[victimIndex].playerId} ===== ${raw[i-1]} \n',
-          // );
-
-          print(
-            'killerId: ${players[killerIndex].playerId} ===== ${raw[i]}',
-          );
-          print(
-            'victimId: ${players[victimIndex].playerId} ===== ${raw[i - 1]} \n',
-          );
+        if (victimIndex > -1) {
+          killer.killed?.add(victim.name.toString());
         }
+
+        print('killer === ${killer.toJson().toString()}, score === ${killerEvent["Item"]["Score"]}');
+        print('victim === ${victim.toJson().toString()}');
       }
     }
 
     inspect(players);
-    print(players.map((e) => e.toJson()).toList().toString());
+    print(players.map((e) => e.toJson()).toList());
+  }
+
+  int lookUpVictim(List<Player> players, List<String> raw, int eventIndex) {
+    for (int i = eventIndex - 1; i >= 0; i--) {
+      if (raw[i].contains('Wounds')) {
+        Map<String, dynamic> victim = jsonDecode(raw[i]);
+        int victimIndex = players.indexWhere(
+            (element) => element.playerId == victim['Item']['PlayerId']);
+        return victimIndex;
+      }
+    }
+    return -1;
   }
 
   @override
